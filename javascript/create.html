@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Create Factur-X with InvoiceXML API</title>
+<!--
+  Get API key: https://www.invoicexml.com/account/authentication
+  Docs:        https://www.invoicexml.com/docs/api/create/facturx
+
+  WARNING: do not ship API keys in production browser code. Anyone who
+  views the page source can read and reuse your key. For production,
+  proxy this request through your own backend so the key stays server-side.
+-->
+
+<h1>Create Factur-X invoice</h1>
+<button id="run">Generate invoice</button>
+<p id="status"></p>
+
+<script>
+const apiKey = 'YOUR_API_KEY';
+
+const fields = {
+    'InvoiceNumber':          'INV-2025-001',
+    'IssueDate':              '2025-07-01',
+    'PaymentDueDate':         '2025-08-01',
+    'Currency':               'EUR',
+    'SellerName':             'Acme GmbH',
+    'SellerLegalId':          'HRB98765',
+    'SellerTaxId':            'DE123456789',
+    'SellerStreet':           'Musterstr. 1',
+    'SellerPostcode':         '10115',
+    'SellerCity':             'Berlin',
+    'SellerCountry':          'DE',
+    'BuyerName':              'Example Corp',
+    'BuyerStreet':            '12 Rue de Rivoli',
+    'BuyerPostcode':          '75001',
+    'BuyerCity':              'Paris',
+    'BuyerCountry':           'FR',
+    'Lines[0].Description':   'Consulting Services',
+    'Lines[0].Quantity':      '10',
+    'Lines[0].UnitPrice':     '150.00',
+    'Lines[0].TaxPercentage': '19',
+    'PaymentMeansCode':       '30',
+    'IBAN':                   'DE89370400440532013000',
+};
+
+document.getElementById('run').addEventListener('click', async () => {
+    const status = document.getElementById('status');
+    status.textContent = 'Generating...';
+
+    const form = new FormData();
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+
+    const response = await fetch('https://api.invoicexml.com/v1/create/facturx', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + apiKey },
+        body: form,
+    });
+
+    if (!response.ok) {
+        status.textContent = `InvoiceXML API error ${response.status}: ${await response.text()}`;
+        return;
+    }
+
+    const blob = await response.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'invoice-facturx.pdf';
+    a.click();
+    status.textContent = `Downloaded invoice-facturx.pdf (${blob.size} bytes)`;
+});
+</script>
