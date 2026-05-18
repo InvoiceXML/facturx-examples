@@ -6,6 +6,10 @@ Examples in **C#, Java, PHP, JavaScript, Node.js, and Python** covering every co
 
 Provided and maintained by [InvoiceXML](https://www.invoicexml.com), a complete e-invoice compliance toolkit for electronic invoicing standards, including Factur-X, ZUGFeRD, UBL, Peppol BIS Billing, and XRechnung, available via REST-API, no-code platforms, and MCP server.
 
+## InvoiceXML vs building it yourself
+
+The EN 16931 specification alone runs over 400 pages, PDF/A-3b conformance is stricter than most teams expect, and the validation Schematron updates with every regulatory revision. A realistic in-house build is 6 to 12 weeks of engineering, plus 0.3 to 0.5 FTE permanently allocated to tracking spec changes as more and more EU countries roll out their mandates. InvoiceXML absorbs all of that behind a single REST API covering Factur-X, ZUGFeRD, XRechnung, UBL, CII, and Peppol BIS. EU-hosted, GDPR-compliant, no invoice data persisted between calls, sub-second responses, 99.95% uptime. Your integration keeps calling the same endpoints when the spec changes next quarter, you get the latest compliance out of the box, zero maintenance required.
+
 ---
 
 ## Table of Contents
