@@ -1,0 +1,261 @@
+# Factur-X for Python: InvoiceXML API Examples
+
+Python code samples for creating, validating, and extracting **Factur-X** electronic invoices using the **[InvoiceXML API](https://www.invoicexml.com)**. Compatible with **Python 3.7+** (3.10+ recommended). Runs in Django, Flask, FastAPI, Pandas pipelines, Jupyter notebooks, AWS Lambda, Google Cloud Functions, Azure Functions, or plain scripts.
+
+For background on the Factur-X standard itself (what it is, profiles, legal status), see the [main repository README](../README.md).
+
+## Get your API key
+
+Every example in this folder calls the InvoiceXML REST API. Sign up and generate a free API key here:
+
+**→ [https://www.invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication)**
+
+Pass it as a Bearer token on every request:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Requirements
+
+- **Python 3.7 or later** (3.10+ recommended)
+- The **`requests`** library
+
+```bash
+pip install requests
+```
+
+Or with [uv](https://github.com/astral-sh/uv) (the modern alternative):
+
+```bash
+uv pip install requests
+```
+
+`requests` is the standard HTTP client for Python: clean multipart support, automatic JSON decoding, and the most familiar API in the ecosystem. If you prefer the modern async alternative, `httpx` translates almost line-for-line.
+
+## Files in this folder
+
+| File | Operation | API endpoint |
+|---|---|---|
+| [`create.py`](./create.py) | Build a Factur-X PDF/A-3 invoice with embedded EN 16931 XML | [`POST /v1/create/facturx`](https://www.invoicexml.com/docs/api/create/facturx) |
+| [`validate.py`](./validate.py) | Validate a Factur-X file against schematron rules | [`POST /v1/validate/facturx`](https://www.invoicexml.com/docs/api/validate/facturx) |
+| [`extract_json.py`](./extract_json.py) | Extract Factur-X invoice data as JSON | [`POST /v1/extract/json`](https://www.invoicexml.com/docs/api/extract/json) |
+| [`extract_xml.py`](./extract_xml.py) | Extract the raw `factur-x.xml` from a Factur-X PDF | [`POST /v1/extract/xml`](https://www.invoicexml.com/docs/api/extract/xml) |
+| [`ai_convert.py`](./ai_convert.py) | (Experimental) Convert a plain PDF to Factur-X with AI | [`POST /v1/transform/to/facturx`](https://www.invoicexml.com/docs/api/transform/to/facturx) |
+
+Each file is standalone and runnable with `python create.py`. Open the file, replace `YOUR_API_KEY` with your real key, and execute.
+
+---
+
+## Create a Factur-X invoice in Python
+
+```python
+import requests
+
+fields = {
+    "InvoiceNumber":  "INV-2025-001",
+    "IssueDate":      "2025-07-01",
+    "Currency":       "EUR",
+    "SellerName":     "Acme GmbH",
+    "SellerCountry":  "DE",
+    # ... seller, buyer, line items, payment fields
+}
+
+response = requests.post(
+    "https://api.invoicexml.com/v1/create/facturx",
+    headers={"Authorization": f"Bearer {api_key}"},
+    files={k: (None, v) for k, v in fields.items()},
+)
+
+with open("invoice-facturx.pdf", "wb") as f:
+    f.write(response.content)
+```
+
+The response is a binary PDF/A-3 file with the Factur-X XML already embedded. Note: `requests` is told to send multipart/form-data by passing the fields as `files=` with `(None, value)` tuples, matching the documented curl `-F` behavior.
+
+[Full example: `create.py`](./create.py) | [API reference](https://www.invoicexml.com/docs/api/create/facturx)
+
+---
+
+## Validate a Factur-X file in Python
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.invoicexml.com/v1/validate/facturx",
+    headers={"Authorization": f"Bearer {api_key}"},
+    files={"file": ("invoice.pdf", open("invoice.pdf", "rb"), "application/pdf")},
+    data={"version": "2.3.2", "profile": "extended"},
+)
+print(response.text)
+```
+
+Returns a JSON validation report listing any schematron rule failures (EN 16931 BR-* and BR-CO-* rules).
+
+[Full example: `validate.py`](./validate.py) | [API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+
+---
+
+## Extract Factur-X data as JSON in Python
+
+Useful for Pandas pipelines, Django/Flask models, or any system that prefers JSON over XML.
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.invoicexml.com/v1/extract/json",
+    headers={"Authorization": f"Bearer {api_key}"},
+    files={"file": ("invoice.pdf", open("invoice.pdf", "rb"), "application/pdf")},
+)
+
+invoice = response.json()
+print(invoice["seller"]["name"], invoice["totals"]["gross"])
+```
+
+[Full example: `extract_json.py`](./extract_json.py) | [API reference](https://www.invoicexml.com/docs/api/extract/json)
+
+---
+
+## Extract embedded XML from a Factur-X PDF in Python
+
+Returns the raw `factur-x.xml` payload (UN/CEFACT Cross-Industry Invoice syntax). Use this when you need the structured XML to feed an existing UBL or CII pipeline, EDI partner, or archival system.
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.invoicexml.com/v1/extract/xml",
+    headers={"Authorization": f"Bearer {api_key}"},
+    files={"file": ("invoice.pdf", open("invoice.pdf", "rb"), "application/pdf")},
+)
+
+with open("factur-x.xml", "w", encoding="utf-8") as f:
+    f.write(response.text)
+```
+
+[Full example: `extract_xml.py`](./extract_xml.py) | [API reference](https://www.invoicexml.com/docs/api/extract/xml)
+
+---
+
+## (Experimental) Convert a plain PDF to Factur-X with AI
+
+> **Experimental feature. Human verification required before any production use.**
+>
+> Real-world PDF invoices are often messy: scanned at low quality, irregularly formatted, multi-page, or missing fields that EN 16931 requires. AI extraction can make subtle mistakes that automated validators may not catch: wrong tax category codes, transposed amounts, missing seller VAT identifiers, incorrect currency formatting.
+>
+> Always review the output PDF before sending it to a customer or tax authority. See the [AI conversion notes in the main README](../README.md#ai-powered-pdf-to-factur-x-conversion-experimental).
+
+```python
+import requests
+
+response = requests.post(
+    "https://api.invoicexml.com/v1/transform/to/facturx",
+    headers={"Authorization": f"Bearer {api_key}"},
+    files={"file": ("plain-invoice.pdf", open("plain-invoice.pdf", "rb"), "application/pdf")},
+    data={"version": "2.3.2", "profile": "extended", "syntax": "cii",
+          "embed": "true", "language": "en"},
+)
+
+with open("converted-facturx.pdf", "wb") as f:
+    f.write(response.content)
+```
+
+[Full example: `ai_convert.py`](./ai_convert.py) | [API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+
+---
+
+## Framework integration
+
+### Django
+
+Return a Factur-X invoice from a view:
+
+```python
+from django.http import HttpResponse
+
+def download_facturx(request, invoice_id):
+    pdf_bytes = create_facturx_for(invoice_id)
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="invoice-{invoice_id}.pdf"'
+    return response
+```
+
+Store the API key in `settings.py` via `INVOICEXML_API_KEY = os.environ["INVOICEXML_API_KEY"]`.
+
+### Flask
+
+```python
+from flask import send_file
+from io import BytesIO
+
+@app.route("/invoices/<int:invoice_id>/facturx")
+def get_facturx(invoice_id):
+    pdf_bytes = create_facturx_for(invoice_id)
+    return send_file(BytesIO(pdf_bytes), mimetype="application/pdf",
+                     as_attachment=True, download_name=f"invoice-{invoice_id}.pdf")
+```
+
+### FastAPI
+
+```python
+from fastapi.responses import Response
+
+@app.get("/invoices/{invoice_id}/facturx")
+async def get_facturx(invoice_id: int):
+    pdf_bytes = create_facturx_for(invoice_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="invoice-{invoice_id}.pdf"'},
+    )
+```
+
+### Pandas and data pipelines
+
+The `extract_json.py` example fits naturally into a Pandas pipeline: walk a folder of Factur-X PDFs, extract each to JSON, and load into a DataFrame for analysis or bulk archival.
+
+```python
+import pandas as pd, requests, os
+
+rows = []
+for pdf in os.listdir("invoices/"):
+    with open(f"invoices/{pdf}", "rb") as f:
+        data = requests.post(
+            "https://api.invoicexml.com/v1/extract/json",
+            headers={"Authorization": f"Bearer {api_key}"},
+            files={"file": (pdf, f, "application/pdf")},
+        ).json()
+    rows.append(data)
+
+df = pd.DataFrame(rows)
+```
+
+### AWS Lambda
+
+The `requests` library works in Lambda directly. Include it via Lambda layers or in your deployment zip.
+
+---
+
+## Common issues
+
+- **`HTTP 401 Unauthorized`**: API key missing or invalid. Generate one at [invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication) and confirm you are sending `Authorization: Bearer YOUR_API_KEY`.
+- **`HTTP 400 Bad Request` on Create**: a required field is missing or malformed. Frequent causes: `IssueDate` not in ISO format (`YYYY-MM-DD`), `Currency` not in ISO 4217 (`EUR`, `USD`), country codes not in ISO 3166-1 alpha-2 (`DE`, `FR`).
+- **`SSL: CERTIFICATE_VERIFY_FAILED` on macOS**: run `/Applications/Python\ 3.x/Install\ Certificates.command` to install Python's CA bundle. Do not disable SSL verification in production.
+- **`ConnectionError` or timeout**: add an explicit `timeout=30` parameter to `requests.post()`. AI conversion in particular can take 10 to 30 seconds for larger PDFs.
+- **File handle warnings**: the examples use inline `open()` for brevity. For production code, prefer `with open(...) as f:` to ensure file handles close deterministically.
+- **Schematron BR-CO-* failures on Validate**: line totals do not match the header total, or tax category and tax percentage are inconsistent. Recompute totals before posting.
+
+---
+
+## Resources
+
+- [Get an InvoiceXML API key](https://www.invoicexml.com/account/authentication)
+- [Create Factur-X API reference](https://www.invoicexml.com/docs/api/create/facturx)
+- [Validate Factur-X API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+- [Extract JSON API reference](https://www.invoicexml.com/docs/api/extract/json)
+- [Extract XML API reference](https://www.invoicexml.com/docs/api/extract/xml)
+- [Transform to Factur-X API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+- [requests library documentation](https://requests.readthedocs.io/)
+- [Main repository README](../README.md)
