@@ -1,0 +1,25 @@
+# Extract Factur-X invoice data as JSON using the InvoiceXML API.
+# Get API key: https://www.invoicexml.com/account/authentication
+# Docs:        https://www.invoicexml.com/docs/api/extract/json
+#
+# Dependency:  pip install requests
+
+import requests
+import sys
+
+api_key = "YOUR_API_KEY"
+
+response = requests.post(
+    "https://api.invoicexml.com/v1/extract/json",
+    headers={"Authorization": f"Bearer {api_key}"},
+    files={"file": ("invoice.pdf", open("invoice.pdf", "rb"), "application/pdf")},
+)
+
+if not response.ok:
+    sys.stderr.write(f"InvoiceXML API error {response.status_code}: {response.text}\n")
+    sys.exit(1)
+
+with open("invoice.json", "w", encoding="utf-8") as f:
+    f.write(response.text)
+
+print(response.text)
