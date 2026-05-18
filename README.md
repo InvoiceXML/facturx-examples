@@ -168,7 +168,7 @@ A Factur-X PDF/A-3 carries its XML as an attached file with a specific name (`fa
 
 ## AI-powered PDF to Factur-X conversion (Experimental)
 
-> ⚠️ **Experimental feature. Human verification required before any production use.**
+> **Experimental feature. Human verification required before any production use.**
 >
 > Real-world PDF invoices are often messy: scanned at low quality, irregularly formatted, multi-page, multilingual, or missing fields that EN 16931 requires. Producing a fully compliant Factur-X document from such an input is non-trivial, and AI extraction can make subtle mistakes that automated validators may not catch: wrong tax category codes, transposed amounts, missing seller VAT identifiers, incorrect currency formatting.
 >
