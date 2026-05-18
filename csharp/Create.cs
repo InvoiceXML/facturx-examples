@@ -1,5 +1,3 @@
-// Create.cs
-//
 // Create a Factur-X PDF/A-3 invoice with embedded EN 16931 XML using the
 // InvoiceXML REST API.
 //
@@ -17,14 +15,8 @@ public static class CreateFacturX
 
     public static async Task<byte[]> RunAsync(string outputPath = "invoice-facturx.pdf")
     {
-        // Read the InvoiceXML API key from environment so it stays out of
-        // source control. Get one at:
-        // https://www.invoicexml.com/account/authentication
-        var apiKey = Environment.GetEnvironmentVariable("INVOICEXML_API_KEY")
-            ?? throw new InvalidOperationException(
-                "Set INVOICEXML_API_KEY environment variable. " +
-                "Get an InvoiceXML API key at " +
-                "https://www.invoicexml.com/account/authentication");
+        // Get an InvoiceXML API key at: https://www.invoicexml.com/account/authentication
+        var apiKey = "INVOICEXML_API_KEY";
 
         try
         {
