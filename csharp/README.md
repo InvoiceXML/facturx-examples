@@ -145,7 +145,7 @@ Returns the raw `factur-x.xml` payload (UN/CEFACT Cross-Industry Invoice syntax)
 
 ## (Experimental) Convert a plain PDF to Factur-X with AI
 
-> ⚠️ **Experimental feature. Human verification required before any production use.**
+> **Experimental feature. Human verification required before any production use.**
 >
 > Real-world PDF invoices are often messy: scanned at low quality, irregularly formatted, multi-page, multilingual, or missing fields that EN 16931 requires. AI extraction can make subtle mistakes that automated validators may not catch: wrong tax category codes, transposed amounts, missing seller VAT identifiers, incorrect currency formatting.
 >
