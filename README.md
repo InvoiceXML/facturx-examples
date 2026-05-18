@@ -4,7 +4,7 @@ Open-source code examples for working with **Factur-X**, the European hybrid e-i
 
 Examples in **C#, Java, PHP, JavaScript, Node.js, and Python** covering every common Factur-X operation: invoice creation, validation, structured data extraction as JSON, raw XML extraction, and (experimental) AI-powered conversion of plain PDF invoices into compliant Factur-X documents.
 
-Provided and maintained by [invoicexml.com](https://invoicexml.com), a developer resource hub for electronic invoicing standards including Factur-X, ZUGFeRD, UBL, Peppol BIS Billing, and XRechnung.
+Provided and maintained by [InvoiceXML](https://www.invoicexml.com), a complete e-invoice compliance toolkit for electronic invoicing standards, including Factur-X, ZUGFeRD, UBL, Peppol BIS Billing, and XRechnung, available via REST-API, no-code platforms, and MCP server.
 
 ---
 
