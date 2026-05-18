@@ -1,5 +1,3 @@
-// Validate.cs
-//
 // Validate a Factur-X PDF against the official EN 16931 schematron rules
 // using the InvoiceXML REST API.
 //
@@ -20,13 +18,8 @@ public static class ValidateFacturX
         string version = "2.3.2",
         string profile = "extended")
     {
-        // Get an InvoiceXML API key at:
-        // https://www.invoicexml.com/account/authentication
-        var apiKey = Environment.GetEnvironmentVariable("INVOICEXML_API_KEY")
-            ?? throw new InvalidOperationException(
-                "Set INVOICEXML_API_KEY environment variable. " +
-                "Get an InvoiceXML API key at " +
-                "https://www.invoicexml.com/account/authentication");
+        // Get an InvoiceXML API key at: https://www.invoicexml.com/account/authentication
+        var apiKey = "INVOICEXML_API_KEY";
 
         if (!File.Exists(pdfPath))
             throw new FileNotFoundException($"Input PDF not found: {pdfPath}");
