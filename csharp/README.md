@@ -1,0 +1,220 @@
+# Factur-X for C# and .NET: InvoiceXML REST API Examples
+
+C# and .NET code samples for creating, validating, and extracting **Factur-X** electronic invoices using the **[invoicexml.com API](https://www.invoicexml.com)**. Compatible with **.NET 6, .NET 8, and .NET Framework 4.7.2+**, and ready to drop into console apps, ASP.NET Core Web APIs, Blazor, MAUI, Azure Functions, or AWS Lambda.
+
+## Get your API key
+
+Every example in this folder calls the InvoiceXML REST API. Sign up and generate a key here:
+
+**→ [https://www.invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication)**
+
+Pass it as a Bearer token on every request:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Requirements
+
+- **.NET 6.0 or later** (recommended: .NET 8)
+- **.NET Framework 4.7.2+** also supported
+- Runs on Windows, Linux, macOS, Docker, Azure, and AWS Lambda
+- One NuGet package: [Flurl.Http](https://www.nuget.org/packages/Flurl.Http) for clean multipart uploads and bearer auth
+
+```bash
+dotnet add package Flurl.Http
+```
+
+If you prefer plain `HttpClient` over Flurl, every example translates directly. Flurl just makes the multipart and authentication wiring a one-liner.
+
+## Files in this folder
+
+| File | Operation | API endpoint |
+|---|---|---|
+| [`Create.cs`](./Create.cs) | Build a Factur-X PDF/A-3 invoice with embedded EN 16931 XML | [`POST /v1/create/facturx`](https://www.invoicexml.com/docs/api/create/facturx) |
+| [`Validate.cs`](./Validate.cs) | Validate a Factur-X file against schematron rules | [`POST /v1/validate/facturx`](https://www.invoicexml.com/docs/api/validate/facturx) |
+| [`ExtractJson.cs`](./ExtractJson.cs) | Extract Factur-X invoice data as JSON | [`POST /v1/extract/json`](https://www.invoicexml.com/docs/api/extract/json) |
+| [`ExtractXml.cs`](./ExtractXml.cs) | Extract the raw `factur-x.xml` from a Factur-X PDF | [`POST /v1/extract/xml`](https://www.invoicexml.com/docs/api/extract/xml) |
+| [`AiConvert.cs`](./AiConvert.cs) | (Experimental) Convert a plain PDF to Factur-X with AI | [`POST /v1/transform/to/facturx`](https://www.invoicexml.com/docs/api/transform/to/facturx) |
+
+---
+
+## Create a Factur-X invoice in C#
+
+```csharp
+using Flurl.Http;
+
+var pdfBytes = await "https://api.invoicexml.com/v1/create/facturx"
+    .WithOAuthBearerToken(apiKey)
+    .PostMultipartAsync(mp => mp
+        .AddString("InvoiceNumber", "INV-2025-001")
+        .AddString("IssueDate", "2025-07-01")
+        .AddString("PaymentDueDate", "2025-08-01")
+        .AddString("Currency", "EUR")
+        .AddString("SellerName", "Acme GmbH")
+        .AddString("SellerTaxId", "DE123456789")
+        .AddString("SellerStreet", "Musterstr. 1")
+        .AddString("SellerPostcode", "10115")
+        .AddString("SellerCity", "Berlin")
+        .AddString("SellerCountry", "DE")
+        .AddString("BuyerName", "Example Corp")
+        .AddString("BuyerStreet", "12 Rue de Rivoli")
+        .AddString("BuyerPostcode", "75001")
+        .AddString("BuyerCity", "Paris")
+        .AddString("BuyerCountry", "FR")
+        .AddString("Lines[0].Description", "Consulting Services")
+        .AddString("Lines[0].Quantity", "10")
+        .AddString("Lines[0].UnitPrice", "150.00")
+        .AddString("Lines[0].TaxPercentage", "19")
+        .AddString("PaymentMeansCode", "30")
+        .AddString("IBAN", "DE89370400440532013000")
+    )
+    .ReceiveBytes();
+
+await File.WriteAllBytesAsync("invoice-facturx.pdf", pdfBytes);
+```
+
+The response is a binary PDF/A-3 file with the Factur-X XML already embedded.
+
+[Full example: `Create.cs`](./Create.cs) | [API reference](https://www.invoicexml.com/docs/api/create/facturx)
+
+---
+
+## Validate a Factur-X file in C#
+
+```csharp
+using Flurl.Http;
+
+var report = await "https://api.invoicexml.com/v1/validate/facturx"
+    .WithOAuthBearerToken(apiKey)
+    .PostMultipartAsync(mp => mp
+        .AddFile("file", "invoice.pdf", "application/pdf")
+        .AddString("version", "2.3.2")
+        .AddString("profile", "extended")
+    )
+    .ReceiveString();
+
+Console.WriteLine(report);
+```
+
+Returns a JSON validation report listing any schematron rule failures (EN 16931 BR-* and BR-CO-* rules).
+
+[Full example: `Validate.cs`](./Validate.cs) | [API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+
+---
+
+## Extract Factur-X data as JSON in C#
+
+A common need: get Factur-X invoice data into a JSON-friendly format for REST APIs, ERPs, or downstream pipelines.
+
+```csharp
+using Flurl.Http;
+
+var json = await "https://api.invoicexml.com/v1/extract/json"
+    .WithOAuthBearerToken(apiKey)
+    .PostMultipartAsync(mp => mp
+        .AddFile("file", "invoice.pdf", "application/pdf"))
+    .ReceiveString();
+
+await File.WriteAllTextAsync("invoice.json", json);
+```
+
+[Full example: `ExtractJson.cs`](./ExtractJson.cs) | [API reference](https://www.invoicexml.com/docs/api/extract/json)
+
+---
+
+## Extract embedded XML from a Factur-X PDF in C#
+
+```csharp
+using Flurl.Http;
+
+var xml = await "https://api.invoicexml.com/v1/extract/xml"
+    .WithOAuthBearerToken(apiKey)
+    .PostMultipartAsync(mp => mp
+        .AddFile("file", "invoice.pdf", "application/pdf"))
+    .ReceiveString();
+
+await File.WriteAllTextAsync("factur-x.xml", xml);
+```
+
+Returns the raw `factur-x.xml` payload (UN/CEFACT Cross-Industry Invoice syntax). Use this when you need the structured XML directly, for example to feed an existing UBL or CII pipeline.
+
+[Full example: `ExtractXml.cs`](./ExtractXml.cs) | [API reference](https://www.invoicexml.com/docs/api/extract/xml)
+
+---
+
+## (Experimental) Convert a plain PDF to Factur-X with AI
+
+> ⚠️ **Experimental feature. Human verification required before any production use.**
+>
+> Real-world PDF invoices are often messy: scanned at low quality, irregularly formatted, multi-page, multilingual, or missing fields that EN 16931 requires. AI extraction can make subtle mistakes that automated validators may not catch: wrong tax category codes, transposed amounts, missing seller VAT identifiers, incorrect currency formatting.
+>
+> Always review the output PDF before sending it to a customer or tax authority. See the [AI conversion notes in the main README](../README.md#ai-powered-pdf-to-factur-x-conversion-experimental).
+
+```csharp
+using Flurl.Http;
+
+var pdfBytes = await "https://api.invoicexml.com/v1/transform/to/facturx"
+    .WithOAuthBearerToken(apiKey)
+    .PostMultipartAsync(mp => mp
+        .AddFile("file", "plain-invoice.pdf", "application/pdf")
+        .AddString("version", "2.3.2")
+        .AddString("profile", "extended")
+        .AddString("syntax", "cii")
+        .AddString("embed", "true")
+        .AddString("language", "en")
+    )
+    .ReceiveBytes();
+
+await File.WriteAllBytesAsync("converted-facturx.pdf", pdfBytes);
+```
+
+[Full example: `AiConvert.cs`](./AiConvert.cs) | [API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+
+---
+
+## Framework integration
+
+### ASP.NET Core / Web API
+
+Return a Factur-X invoice from a controller action by proxying the invoicexml.com API:
+
+```csharp
+[HttpGet("invoices/{id}/facturx")]
+public async Task<IActionResult> GetFacturX(string id)
+{
+    var pdfBytes = await CreateFacturX.RunAsync(/* invoice data from your DB */);
+    return File(pdfBytes, "application/pdf", $"invoice-{id}.pdf");
+}
+```
+
+### Console / Worker Service
+
+Each example exposes a static `RunAsync` method. From `Program.cs`:
+
+```csharp
+await CreateFacturX.RunAsync();
+await ValidateFacturX.RunAsync("invoice.pdf");
+await ExtractJson.RunAsync("invoice.pdf");
+```
+
+---
+
+## Common issues
+
+- **401 Unauthorized**: API key missing or invalid. Generate one at [invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication) and confirm you are sending `Authorization: Bearer YOUR_API_KEY`.
+- **400 Bad Request on Create**: a required field is missing or malformed. Frequent causes: `IssueDate` not in ISO format (`YYYY-MM-DD`), `Currency` not in ISO 4217 (`EUR`, `USD`), country codes not in ISO 3166-1 alpha-2 (`DE`, `FR`).
+- **Schematron BR-CO-* failures on Validate**: line totals do not match the header total, or tax category and tax percentage are inconsistent. Recompute totals or leave empty for auto-calculation when posting.
+
+---
+
+## Resources
+
+- [Get an API key](https://www.invoicexml.com/account/authentication)
+- [Create Factur-X API reference](https://www.invoicexml.com/docs/api/create/facturx)
+- [Validate Factur-X API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+- [Extract JSON API reference](https://www.invoicexml.com/docs/api/extract/json)
+- [Extract XML API reference](https://www.invoicexml.com/docs/api/extract/xml)
+- [Transform to Factur-X API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+- [Flurl.Http documentation](https://flurl.dev/docs/fluent-http/)
+- [Main repository README](../README.md)
