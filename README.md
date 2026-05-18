@@ -1,4 +1,4 @@
-# Factur-X Examples: Create, Validate, and Extract Factur-X Invoices using REST API
+# Factur-X REST API Examples: Create, Validate, and Extract Factur-X Invoices
 
 Open-source code examples for working with **Factur-X**, the European hybrid e-invoicing standard combining a human-readable PDF/A-3 with embedded structured XML data. Compliant with **EN 16931** and technically identical to **ZUGFeRD 2.x** in Germany.
 
