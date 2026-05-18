@@ -1,0 +1,30 @@
+// Validate a Factur-X PDF using the InvoiceXML API.
+// Get API key: https://www.invoicexml.com/account/authentication
+// Docs:        https://www.invoicexml.com/docs/api/validate/facturx
+//
+// Requires Node.js 18+. No dependencies.
+
+const fs = require('fs');
+
+const apiKey = 'YOUR_API_KEY';
+
+(async () => {
+    const form = new FormData();
+    form.append('file', new Blob([fs.readFileSync('invoice.pdf')], { type: 'application/pdf' }), 'invoice.pdf');
+    form.append('version', '2.3.2');
+    form.append('profile', 'extended');
+
+    const response = await fetch('https://api.invoicexml.com/v1/validate/facturx', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+    });
+
+    const report = await response.text();
+    if (!response.ok) {
+        console.error(`InvoiceXML API error ${response.status}: ${report}`);
+        process.exit(1);
+    }
+
+    console.log(report);
+})();
