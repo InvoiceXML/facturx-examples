@@ -56,11 +56,11 @@ Every example in this repository produces or consumes invoices that conform to t
 
 | Operation | Description |
 |---|---|
-| **Create Factur-X** | Build a Factur-X PDF/A-3 invoice from scratch with embedded EN 16931 XML |
-| **Validate Factur-X** | Verify a Factur-X file against the official Factur-X and EN 16931 schematron rules |
-| **Extract JSON** | Parse the embedded XML and return structured invoice data as JSON for downstream systems |
-| **Extract XML** | Extract the raw XML payload from a Factur-X PDF/A-3 container |
-| **AI Convert** *(experimental)* | Convert a plain, unstructured PDF invoice into a compliant Factur-X document using a large language model |
+| **[Create Factur-X](https://www.invoicexml.com/create-facturx)** | Build a Factur-X PDF/A-3 invoice from scratch with embedded EN 16931 XML |
+| **[Validate Factur-X](https://www.invoicexml.com/api/validate/facturx)** | Verify a Factur-X file against the official Factur-X and EN 16931 schematron rules |
+| **[Extract JSON](https://www.invoicexml.com/extract-invoice-json)** | Parse the embedded XML and return structured invoice data as JSON for downstream systems |
+| **[Extract XML](https://www.invoicexml.com/extract-from-facturx)** | Extract the raw XML payload from a Factur-X PDF/A-3 container |
+| **[AI Convert](https://www.invoicexml.com/pdf-to-facturx)** *(experimental)* | Convert a plain, unstructured PDF invoice into a compliant Factur-X document using a large language model |
 
 ---
 
