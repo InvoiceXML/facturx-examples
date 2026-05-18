@@ -1,0 +1,220 @@
+# Factur-X for Node.js: InvoiceXML API Examples
+
+Node.js code samples for creating, validating, and extracting **Factur-X** electronic invoices using the **[InvoiceXML API](https://www.invoicexml.com)**. Compatible with **Node.js 18 and later** (native `fetch` and `FormData`). Runs in Express, NestJS, Fastify, Koa, Hapi, Next.js API routes, AWS Lambda, Cloudflare Workers, Vercel Functions, or plain scripts. **Zero npm dependencies.**
+
+For background on the Factur-X standard itself (what it is, profiles, legal status), see the [main repository README](../README.md).
+
+## Get your API key
+
+Every example in this folder calls the InvoiceXML REST API. Sign up and generate a free API key here:
+
+**→ [https://www.invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication)**
+
+Pass it as a Bearer token on every request:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Requirements
+
+- **Node.js 18.0 or later** (current LTS recommended: Node 20 or 22)
+- No npm packages, no `package.json` needed
+
+The examples use Node's built-in global `fetch`, `FormData`, `Blob`, and `Buffer`. These have been stable in Node 18+. If you must support Node 16 or older, polyfill `fetch` with `node-fetch` and `FormData` with `form-data`.
+
+## Files in this folder
+
+| File | Operation | API endpoint |
+|---|---|---|
+| [`create.js`](./create.js) | Build a Factur-X PDF/A-3 invoice with embedded EN 16931 XML | [`POST /v1/create/facturx`](https://www.invoicexml.com/docs/api/create/facturx) |
+| [`validate.js`](./validate.js) | Validate a Factur-X file against schematron rules | [`POST /v1/validate/facturx`](https://www.invoicexml.com/docs/api/validate/facturx) |
+| [`extract-json.js`](./extract-json.js) | Extract Factur-X invoice data as JSON | [`POST /v1/extract/json`](https://www.invoicexml.com/docs/api/extract/json) |
+| [`extract-xml.js`](./extract-xml.js) | Extract the raw `factur-x.xml` from a Factur-X PDF | [`POST /v1/extract/xml`](https://www.invoicexml.com/docs/api/extract/xml) |
+| [`ai-convert.js`](./ai-convert.js) | (Experimental) Convert a plain PDF to Factur-X with AI | [`POST /v1/transform/to/facturx`](https://www.invoicexml.com/docs/api/transform/to/facturx) |
+
+Each file is standalone and runnable with `node create.js`. Open the file, replace `YOUR_API_KEY` with your real key, and execute.
+
+---
+
+## Create a Factur-X invoice in Node.js
+
+```js
+const fields = {
+    'InvoiceNumber': 'INV-2025-001',
+    'IssueDate':     '2025-07-01',
+    'Currency':      'EUR',
+    'SellerName':    'Acme GmbH',
+    'SellerCountry': 'DE',
+    // ... seller, buyer, line items, payment fields
+};
+
+const form = new FormData();
+for (const [k, v] of Object.entries(fields)) form.append(k, v);
+
+const response = await fetch('https://api.invoicexml.com/v1/create/facturx', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + apiKey },
+    body: form,
+});
+
+const buffer = Buffer.from(await response.arrayBuffer());
+fs.writeFileSync('invoice-facturx.pdf', buffer);
+```
+
+The response is a binary PDF/A-3 file with the Factur-X XML already embedded.
+
+[Full example: `create.js`](./create.js) | [API reference](https://www.invoicexml.com/docs/api/create/facturx)
+
+---
+
+## Validate a Factur-X file in Node.js
+
+```js
+const fs = require('fs');
+
+const form = new FormData();
+form.append('file', new Blob([fs.readFileSync('invoice.pdf')], { type: 'application/pdf' }), 'invoice.pdf');
+form.append('version', '2.3.2');
+form.append('profile', 'extended');
+
+const response = await fetch('https://api.invoicexml.com/v1/validate/facturx', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + apiKey },
+    body: form,
+});
+
+console.log(await response.text());
+```
+
+Returns a JSON validation report listing any schematron rule failures (EN 16931 BR-* and BR-CO-* rules).
+
+[Full example: `validate.js`](./validate.js) | [API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+
+---
+
+## Extract Factur-X data as JSON in Node.js
+
+Useful for feeding Factur-X invoices into Express controllers, message queues, or any pipeline that prefers JSON over XML.
+
+```js
+const fs = require('fs');
+
+const form = new FormData();
+form.append('file', new Blob([fs.readFileSync('invoice.pdf')], { type: 'application/pdf' }), 'invoice.pdf');
+
+const response = await fetch('https://api.invoicexml.com/v1/extract/json', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + apiKey },
+    body: form,
+});
+
+const invoice = await response.json();
+console.log(invoice.seller.name, invoice.totals.gross);
+```
+
+[Full example: `extract-json.js`](./extract-json.js) | [API reference](https://www.invoicexml.com/docs/api/extract/json)
+
+---
+
+## Extract embedded XML from a Factur-X PDF in Node.js
+
+Returns the raw `factur-x.xml` payload (UN/CEFACT Cross-Industry Invoice syntax). Use this when you need the structured XML to feed an existing UBL or CII pipeline, EDI partner, or archival system.
+
+[Full example: `extract-xml.js`](./extract-xml.js) | [API reference](https://www.invoicexml.com/docs/api/extract/xml)
+
+---
+
+## (Experimental) Convert a plain PDF to Factur-X with AI
+
+> **Experimental feature. Human verification required before any production use.**
+>
+> Real-world PDF invoices are often messy: scanned at low quality, irregularly formatted, multi-page, or missing fields that EN 16931 requires. AI extraction can make subtle mistakes that automated validators may not catch: wrong tax category codes, transposed amounts, missing seller VAT identifiers, incorrect currency formatting.
+>
+> Always review the output PDF before sending it to a customer or tax authority. See the [AI conversion notes in the main README](../README.md#ai-powered-pdf-to-factur-x-conversion-experimental).
+
+[Full example: `ai-convert.js`](./ai-convert.js) | [API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+
+---
+
+## Framework integration
+
+### Express
+
+Return a Factur-X invoice from a route handler:
+
+```js
+const express = require('express');
+const app = express();
+
+app.get('/invoices/:id/facturx', async (req, res) => {
+    const pdf = await createFacturX(req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="invoice-${req.params.id}.pdf"`);
+    res.send(pdf);
+});
+```
+
+Store the API key in `process.env.INVOICEXML_API_KEY` and read it from `dotenv` or your platform's secret manager.
+
+### NestJS
+
+```ts
+@Controller('invoices')
+export class InvoiceController {
+    @Get(':id/facturx')
+    @Header('Content-Type', 'application/pdf')
+    async download(@Param('id') id: string, @Res() res: Response) {
+        const pdf = await this.facturXService.create(id);
+        res.setHeader('Content-Disposition', `attachment; filename="invoice-${id}.pdf"`);
+        res.send(pdf);
+    }
+}
+```
+
+### Next.js App Router
+
+```ts
+// app/api/invoices/[id]/facturx/route.ts
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+    const pdf = await createFacturX(params.id);
+    return new Response(pdf, {
+        headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="invoice-${params.id}.pdf"`,
+        },
+    });
+}
+```
+
+### Cloudflare Workers and Vercel Edge
+
+The examples run on Workers and Edge runtimes unchanged because `fetch` and `FormData` are part of the runtime. Replace `fs.readFileSync` with an `await request.arrayBuffer()` from the inbound request and the same pattern works in serverless environments.
+
+### AWS Lambda (Node.js 18+)
+
+Lambda's Node.js 18+ runtime provides native `fetch` and `FormData`, so the examples run as-is.
+
+---
+
+## Common issues
+
+- **`fetch is not defined`**: you are running Node 16 or older. Upgrade to Node 18+ (current LTS), or polyfill with `npm install node-fetch form-data` and import accordingly.
+- **`HTTP 401 Unauthorized`**: API key missing or invalid. Generate one at [invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication) and confirm you are sending `Authorization: Bearer YOUR_API_KEY`.
+- **`HTTP 400 Bad Request` on Create**: a required field is missing or malformed. Frequent causes: `IssueDate` not in ISO format (`YYYY-MM-DD`), `Currency` not in ISO 4217 (`EUR`, `USD`), country codes not in ISO 3166-1 alpha-2 (`DE`, `FR`).
+- **`ESM` vs `CommonJS`**: the examples use CommonJS (`require`). For ESM (`.mjs` extension or `"type": "module"` in `package.json`), swap `require('fs')` for `import fs from 'node:fs'` and you can use top-level await without the IIFE wrapper.
+- **Relative file paths**: `fs.readFileSync('invoice.pdf')` resolves from the current working directory, not the script file. Use `__dirname` (CommonJS) or `import.meta.dirname` (ESM, Node 20.11+) for absolute paths.
+- **Schematron BR-CO-* failures on Validate**: line totals do not match the header total, or tax category and tax percentage are inconsistent. Recompute totals before posting.
+
+---
+
+## Resources
+
+- [Get an InvoiceXML API key](https://www.invoicexml.com/account/authentication)
+- [Create Factur-X API reference](https://www.invoicexml.com/docs/api/create/facturx)
+- [Validate Factur-X API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+- [Extract JSON API reference](https://www.invoicexml.com/docs/api/extract/json)
+- [Extract XML API reference](https://www.invoicexml.com/docs/api/extract/xml)
+- [Transform to Factur-X API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+- [Node.js fetch API documentation](https://nodejs.org/api/globals.html#fetch)
+- [Main repository README](../README.md)
