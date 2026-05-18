@@ -1,0 +1,239 @@
+# Factur-X for PHP: InvoiceXML API Examples
+
+PHP code samples for creating, validating, and extracting **Factur-X** electronic invoices using the **[InvoiceXML API](https://www.invoicexml.com)**. Compatible with **PHP 7.0+** (PHP 8.x recommended), works in plain scripts, Laravel, Symfony, WordPress, WooCommerce, Drupal, Magento, or any other PHP framework. **Zero Composer dependencies**: uses PHP's built-in cURL extension.
+
+For background on the Factur-X standard itself (what it is, profiles, legal status), see the [main repository README](../README.md).
+
+## Get your API key
+
+Every example in this folder calls the InvoiceXML REST API. Sign up and generate a free API key here:
+
+**→ [https://www.invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication)**
+
+Pass it as a Bearer token on every request:
+
+```
+Authorization: Bearer YOUR_API_KEY
+```
+
+## Requirements
+
+- **PHP 7.0 or later** (PHP 8.2+ recommended)
+- The **cURL extension** (`php-curl`), bundled with most PHP installations by default
+- No Composer, no external libraries
+
+These examples use the built-in `curl_*` functions and `CURLFile` (available since PHP 5.5), so they run on essentially any modern PHP install without `composer install`.
+
+## Files in this folder
+
+| File | Operation | API endpoint |
+|---|---|---|
+| [`create.php`](./create.php) | Build a Factur-X PDF/A-3 invoice with embedded EN 16931 XML | [`POST /v1/create/facturx`](https://www.invoicexml.com/docs/api/create/facturx) |
+| [`validate.php`](./validate.php) | Validate a Factur-X file against schematron rules | [`POST /v1/validate/facturx`](https://www.invoicexml.com/docs/api/validate/facturx) |
+| [`extract-json.php`](./extract-json.php) | Extract Factur-X invoice data as JSON | [`POST /v1/extract/json`](https://www.invoicexml.com/docs/api/extract/json) |
+| [`extract-xml.php`](./extract-xml.php) | Extract the raw `factur-x.xml` from a Factur-X PDF | [`POST /v1/extract/xml`](https://www.invoicexml.com/docs/api/extract/xml) |
+| [`ai-convert.php`](./ai-convert.php) | (Experimental) Convert a plain PDF to Factur-X with AI | [`POST /v1/transform/to/facturx`](https://www.invoicexml.com/docs/api/transform/to/facturx) |
+
+Each file is standalone and runnable with `php create.php`. Open the file, replace `YOUR_API_KEY` with your real key, and execute.
+
+---
+
+## Create a Factur-X invoice in PHP
+
+```php
+$ch = curl_init('https://api.invoicexml.com/v1/create/facturx');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => [
+        'InvoiceNumber'  => 'INV-2025-001',
+        'IssueDate'      => '2025-07-01',
+        'Currency'       => 'EUR',
+        'SellerName'     => 'Acme GmbH',
+        'SellerCountry'  => 'DE',
+        // ... seller, buyer, line items, payment fields
+    ],
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+]);
+$pdf = curl_exec($ch);
+file_put_contents('invoice-facturx.pdf', $pdf);
+```
+
+The response is a binary PDF/A-3 file with the Factur-X XML already embedded.
+
+[Full example: `create.php`](./create.php) | [API reference](https://www.invoicexml.com/docs/api/create/facturx)
+
+---
+
+## Validate a Factur-X file in PHP
+
+```php
+$ch = curl_init('https://api.invoicexml.com/v1/validate/facturx');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => [
+        'file'    => new CURLFile('invoice.pdf', 'application/pdf'),
+        'version' => '2.3.2',
+        'profile' => 'extended',
+    ],
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+]);
+$report = curl_exec($ch);
+echo $report;
+```
+
+Returns a JSON validation report listing any schematron rule failures (EN 16931 BR-* and BR-CO-* rules).
+
+[Full example: `validate.php`](./validate.php) | [API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+
+---
+
+## Extract Factur-X data as JSON in PHP
+
+Useful for feeding Factur-X invoices into REST APIs, ERPs, accounting systems, or any pipeline that prefers JSON over XML.
+
+```php
+$ch = curl_init('https://api.invoicexml.com/v1/extract/json');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => ['file' => new CURLFile('invoice.pdf', 'application/pdf')],
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+]);
+$json = curl_exec($ch);
+$data = json_decode($json, true);
+echo $data['seller']['name'];
+```
+
+[Full example: `extract-json.php`](./extract-json.php) | [API reference](https://www.invoicexml.com/docs/api/extract/json)
+
+---
+
+## Extract embedded XML from a Factur-X PDF in PHP
+
+```php
+$ch = curl_init('https://api.invoicexml.com/v1/extract/xml');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => ['file' => new CURLFile('invoice.pdf', 'application/pdf')],
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+]);
+$xml = curl_exec($ch);
+file_put_contents('factur-x.xml', $xml);
+```
+
+Returns the raw `factur-x.xml` payload (UN/CEFACT Cross-Industry Invoice syntax). Use this when you need the structured XML directly, for example to feed an existing UBL or CII pipeline or to archive separately from the PDF.
+
+[Full example: `extract-xml.php`](./extract-xml.php) | [API reference](https://www.invoicexml.com/docs/api/extract/xml)
+
+---
+
+## (Experimental) Convert a plain PDF to Factur-X with AI
+
+> **Experimental feature. Human verification required before any production use.**
+>
+> Real-world PDF invoices are often messy: scanned at low quality, irregularly formatted, multi-page, or missing fields that EN 16931 requires. AI extraction can make subtle mistakes that automated validators may not catch: wrong tax category codes, transposed amounts, missing seller VAT identifiers, incorrect currency formatting.
+>
+> Always review the output PDF before sending it to a customer or tax authority. See the [AI conversion notes in the main README](../README.md#ai-powered-pdf-to-factur-x-conversion-experimental).
+
+```php
+$ch = curl_init('https://api.invoicexml.com/v1/transform/to/facturx');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST           => true,
+    CURLOPT_POSTFIELDS     => [
+        'file'     => new CURLFile('plain-invoice.pdf', 'application/pdf'),
+        'version'  => '2.3.2',
+        'profile'  => 'extended',
+        'syntax'   => 'cii',
+        'embed'    => 'true',
+        'language' => 'en',
+    ],
+    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
+]);
+$pdf = curl_exec($ch);
+file_put_contents('converted-facturx.pdf', $pdf);
+```
+
+[Full example: `ai-convert.php`](./ai-convert.php) | [API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+
+---
+
+## Framework integration
+
+### Laravel
+
+Return a Factur-X invoice from a controller or route closure:
+
+```php
+use Illuminate\Support\Facades\Route;
+
+Route::get('/invoices/{id}/facturx', function ($id) {
+    $pdf = app(FacturXService::class)->create($id);
+    return response($pdf, 200, [
+        'Content-Type'        => 'application/pdf',
+        'Content-Disposition' => "attachment; filename=\"invoice-{$id}.pdf\"",
+    ]);
+});
+```
+
+Store the API key in `config/services.php` and read it via `config('services.invoicexml.key')`.
+
+### Symfony
+
+```php
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class InvoiceController
+{
+    #[Route('/invoices/{id}/facturx', name: 'facturx_download')]
+    public function download(int $id): Response
+    {
+        $pdf = $this->facturXService->create($id);
+        return new Response($pdf, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"invoice-{$id}.pdf\"",
+        ]);
+    }
+}
+```
+
+### WordPress and WooCommerce
+
+Hook into WooCommerce order lifecycle events to generate Factur-X invoices automatically:
+
+```php
+add_action('woocommerce_order_status_completed', function ($order_id) {
+    $order = wc_get_order($order_id);
+    $pdf = create_facturx_from_order($order);
+    file_put_contents(WP_CONTENT_DIR . "/invoices/{$order_id}.pdf", $pdf);
+});
+```
+
+The same pattern works in Magento, Drupal Commerce, and PrestaShop.
+
+---
+
+## Common issues
+
+- **`HTTP 401 Unauthorized`**: API key missing or invalid. Generate one at [invoicexml.com/account/authentication](https://www.invoicexml.com/account/authentication) and confirm you are sending `Authorization: Bearer YOUR_API_KEY`.
+- **`HTTP 400 Bad Request` on Create**: a required field is missing or malformed. Frequent causes: `IssueDate` not in ISO format (`YYYY-MM-DD`), `Currency` not in ISO 4217 (`EUR`, `USD`), country codes not in ISO 3166-1 alpha-2 (`DE`, `FR`).
+- **`Class "CURLFile" not found`**: PHP cURL extension is missing. Install with `apt-get install php-curl` (Debian/Ubuntu), `yum install php-curl` (RHEL), or enable the extension in `php.ini`.
+- **`SSL certificate problem` errors**: the server's CA bundle is out of date. Update OpenSSL on the host, or set `CURLOPT_CAINFO` to a current `cacert.pem` from curl.se/ca/.
+- **Schematron BR-CO-* failures on Validate**: line totals do not match the header total, or tax category and tax percentage are inconsistent. Recompute totals server-side before posting.
+
+---
+
+## Resources
+
+- [Get an InvoiceXML API key](https://www.invoicexml.com/account/authentication)
+- [Create Factur-X API reference](https://www.invoicexml.com/docs/api/create/facturx)
+- [Validate Factur-X API reference](https://www.invoicexml.com/docs/api/validate/facturx)
+- [Extract JSON API reference](https://www.invoicexml.com/docs/api/extract/json)
+- [Extract XML API reference](https://www.invoicexml.com/docs/api/extract/xml)
+- [Transform to Factur-X API reference](https://www.invoicexml.com/docs/api/transform/to/facturx)
+- [PHP cURL documentation](https://www.php.net/manual/en/book.curl.php)
+- [Main repository README](../README.md)
