@@ -56,15 +56,34 @@ Each file is a standalone `public class` with a `main` method, runnable with `ja
 ## Create a Factur-X invoice in Java
 
 ```java
-RequestBody body = new MultipartBody.Builder()
-    .setType(MultipartBody.FORM)
-    .addFormDataPart("InvoiceNumber", "INV-2025-001")
-    .addFormDataPart("IssueDate",     "2025-07-01")
-    .addFormDataPart("Currency",      "EUR")
-    .addFormDataPart("SellerName",    "Acme GmbH")
-    .addFormDataPart("SellerCountry", "DE")
-    // ... seller, buyer, line items, payment fields
-    .build();
+String json = """
+    {
+      "invoice": {
+        "invoiceNumber": "MIN-001",
+        "issueDate": "2026-05-18",
+        "currency": "EUR",
+        "seller": {
+          "name": "Acme",
+          "vatIdentifier": "DE123456789",
+          "legalRegistration": "HRB 12345",
+          "postalAddress": { "line1": "Hauptstraße 12", "city": "Berlin", "postCode": "10115", "country": "DE" }
+        },
+        "buyer": {
+          "name": "Globex SAS",
+          "postalAddress": { "line1": "15 rue de Rivoli", "city": "Paris", "postCode": "75001", "country": "FR" }
+        },
+        "paymentDetails": { "paymentAccountIdentifier": "DE89370400440532013000" },
+        "lines": [{
+          "quantity": 10,
+          "priceDetails": { "netPrice": 150.00 },
+          "vatInformation": { "rate": 19.00 },
+          "item": { "name": "Senior consulting" }
+        }]
+      }
+    }
+    """;
+
+RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
 Request request = new Request.Builder()
     .url("https://api.invoicexml.com/v1/create/facturx")
