@@ -1,4 +1,6 @@
 // Create a Factur-X PDF/A-3 invoice using the InvoiceXML API.
+// Sends a JSON invoice model and receives a PDF.
+//
 // Get API key: https://www.invoicexml.com/account/authentication
 // Docs:        https://www.invoicexml.com/docs/api/create/facturx
 //
@@ -8,41 +10,51 @@ const fs = require('fs');
 
 const apiKey = 'YOUR_API_KEY';
 
-const fields = {
-    'InvoiceNumber':          'INV-2025-001',
-    'IssueDate':              '2025-07-01',
-    'PaymentDueDate':         '2025-08-01',
-    'Currency':               'EUR',
-    'SellerName':             'Acme GmbH',
-    'SellerLegalId':          'HRB98765',
-    'SellerTaxId':            'DE123456789',
-    'SellerStreet':           'Musterstr. 1',
-    'SellerPostcode':         '10115',
-    'SellerCity':             'Berlin',
-    'SellerCountry':          'DE',
-    'BuyerName':              'Example Corp',
-    'BuyerStreet':            '12 Rue de Rivoli',
-    'BuyerPostcode':          '75001',
-    'BuyerCity':              'Paris',
-    'BuyerCountry':           'FR',
-    'Lines[0].Description':   'Consulting Services',
-    'Lines[0].Quantity':      '10',
-    'Lines[0].UnitPrice':     '150.00',
-    'Lines[0].TaxPercentage': '19',
-    'PaymentMeansCode':       '30',
-    'IBAN':                   'DE89370400440532013000',
+const payload = {
+    invoice: {
+        invoiceNumber: 'MIN-001',
+        issueDate:     '2026-05-18',
+        currency:      'EUR',
+        seller: {
+            name:              'Acme',
+            vatIdentifier:     'DE123456789',
+            legalRegistration: 'HRB 12345',
+            postalAddress: {
+                line1:    'Hauptstraße 12',
+                city:     'Berlin',
+                postCode: '10115',
+                country:  'DE',
+            },
+        },
+        buyer: {
+            name: 'Globex SAS',
+            postalAddress: {
+                line1:    '15 rue de Rivoli',
+                city:     'Paris',
+                postCode: '75001',
+                country:  'FR',
+            },
+        },
+        paymentDetails: { paymentAccountIdentifier: 'DE89370400440532013000' },
+        lines: [
+            {
+                quantity:       10,
+                priceDetails:   { netPrice: 150.00 },
+                vatInformation: { rate: 19.00 },
+                item:           { name: 'Senior consulting' },
+            },
+        ],
+    },
 };
 
 (async () => {
-    const form = new FormData();
-    for (const [key, value] of Object.entries(fields)) {
-        form.append(key, value);
-    }
-
     const response = await fetch('https://api.invoicexml.com/v1/create/facturx', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}` },
-        body: form,
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
