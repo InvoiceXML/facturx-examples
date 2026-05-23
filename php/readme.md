@@ -41,19 +41,40 @@ Each file is standalone and runnable with `php create.php`. Open the file, repla
 ## Create a Factur-X invoice in PHP
 
 ```php
+$payload = [
+    'invoice' => [
+        'invoiceNumber' => 'MIN-001',
+        'issueDate'     => '2026-05-18',
+        'currency'      => 'EUR',
+        'seller' => [
+            'name'              => 'Acme',
+            'vatIdentifier'     => 'DE123456789',
+            'legalRegistration' => 'HRB 12345',
+            'postalAddress'     => ['line1' => 'Hauptstraße 12', 'city' => 'Berlin', 'postCode' => '10115', 'country' => 'DE'],
+        ],
+        'buyer' => [
+            'name'          => 'Globex SAS',
+            'postalAddress' => ['line1' => '15 rue de Rivoli', 'city' => 'Paris', 'postCode' => '75001', 'country' => 'FR'],
+        ],
+        'paymentDetails' => ['paymentAccountIdentifier' => 'DE89370400440532013000'],
+        'lines' => [[
+            'quantity'       => 10,
+            'priceDetails'   => ['netPrice' => 150.00],
+            'vatInformation' => ['rate' => 19.00],
+            'item'           => ['name' => 'Senior consulting'],
+        ]],
+    ],
+];
+
 $ch = curl_init('https://api.invoicexml.com/v1/create/facturx');
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
-    CURLOPT_POSTFIELDS     => [
-        'InvoiceNumber'  => 'INV-2025-001',
-        'IssueDate'      => '2025-07-01',
-        'Currency'       => 'EUR',
-        'SellerName'     => 'Acme GmbH',
-        'SellerCountry'  => 'DE',
-        // ... seller, buyer, line items, payment fields
+    CURLOPT_POSTFIELDS     => json_encode($payload),
+    CURLOPT_HTTPHEADER     => [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey,
     ],
-    CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $apiKey],
 ]);
 $pdf = curl_exec($ch);
 file_put_contents('invoice-facturx.pdf', $pdf);
