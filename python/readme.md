@@ -52,19 +52,35 @@ Each file is standalone and runnable with `python create.py`. Open the file, rep
 ```python
 import requests
 
-fields = {
-    "InvoiceNumber":  "INV-2025-001",
-    "IssueDate":      "2025-07-01",
-    "Currency":       "EUR",
-    "SellerName":     "Acme GmbH",
-    "SellerCountry":  "DE",
-    # ... seller, buyer, line items, payment fields
+payload = {
+    "invoice": {
+        "invoiceNumber": "MIN-001",
+        "issueDate":     "2026-05-18",
+        "currency":      "EUR",
+        "seller": {
+            "name":              "Acme",
+            "vatIdentifier":     "DE123456789",
+            "legalRegistration": "HRB 12345",
+            "postalAddress": {"line1": "Hauptstraße 12", "city": "Berlin", "postCode": "10115", "country": "DE"},
+        },
+        "buyer": {
+            "name": "Globex SAS",
+            "postalAddress": {"line1": "15 rue de Rivoli", "city": "Paris", "postCode": "75001", "country": "FR"},
+        },
+        "paymentDetails": {"paymentAccountIdentifier": "DE89370400440532013000"},
+        "lines": [{
+            "quantity":       10,
+            "priceDetails":   {"netPrice": 150.00},
+            "vatInformation": {"rate": 19.00},
+            "item":           {"name": "Senior consulting"},
+        }],
+    },
 }
 
 response = requests.post(
     "https://api.invoicexml.com/v1/create/facturx",
     headers={"Authorization": f"Bearer {api_key}"},
-    files={k: (None, v) for k, v in fields.items()},
+    json=payload,
 )
 
 with open("invoice-facturx.pdf", "wb") as f:
