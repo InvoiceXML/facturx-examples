@@ -1,13 +1,11 @@
 // Create a Factur-X PDF/A-3 invoice using the InvoiceXML API.
+// Sends a JSON invoice model and receives a PDF.
+//
 // Get API key: https://www.invoicexml.com/account/authentication
 // Docs:        https://www.invoicexml.com/docs/api/create/facturx
 //
-// Dependency (Maven):
-//   <dependency>
-//     <groupId>com.squareup.okhttp3</groupId>
-//     <artifactId>okhttp</artifactId>
-//     <version>4.12.0</version>
-//   </dependency>
+// Requires Java 15+ (uses text blocks).
+// Dependency: com.squareup.okhttp3:okhttp:4.12.0
 
 import okhttp3.*;
 import java.nio.file.Files;
@@ -17,31 +15,46 @@ public class Create {
     public static void main(String[] args) throws Exception {
         String apiKey = "YOUR_API_KEY";
 
-        RequestBody body = new MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("InvoiceNumber",          "INV-2025-001")
-            .addFormDataPart("IssueDate",              "2025-07-01")
-            .addFormDataPart("PaymentDueDate",         "2025-08-01")
-            .addFormDataPart("Currency",               "EUR")
-            .addFormDataPart("SellerName",             "Acme GmbH")
-            .addFormDataPart("SellerLegalId",          "HRB98765")
-            .addFormDataPart("SellerTaxId",            "DE123456789")
-            .addFormDataPart("SellerStreet",           "Musterstr. 1")
-            .addFormDataPart("SellerPostcode",         "10115")
-            .addFormDataPart("SellerCity",             "Berlin")
-            .addFormDataPart("SellerCountry",          "DE")
-            .addFormDataPart("BuyerName",              "Example Corp")
-            .addFormDataPart("BuyerStreet",            "12 Rue de Rivoli")
-            .addFormDataPart("BuyerPostcode",          "75001")
-            .addFormDataPart("BuyerCity",              "Paris")
-            .addFormDataPart("BuyerCountry",           "FR")
-            .addFormDataPart("Lines[0].Description",   "Consulting Services")
-            .addFormDataPart("Lines[0].Quantity",      "10")
-            .addFormDataPart("Lines[0].UnitPrice",     "150.00")
-            .addFormDataPart("Lines[0].TaxPercentage", "19")
-            .addFormDataPart("PaymentMeansCode",       "30")
-            .addFormDataPart("IBAN",                   "DE89370400440532013000")
-            .build();
+        String json = """
+            {
+              "invoice": {
+                "invoiceNumber": "MIN-001",
+                "issueDate": "2026-05-18",
+                "currency": "EUR",
+                "seller": {
+                  "name": "Acme",
+                  "vatIdentifier": "DE123456789",
+                  "legalRegistration": "HRB 12345",
+                  "postalAddress": {
+                    "line1": "Hauptstraße 12",
+                    "city": "Berlin",
+                    "postCode": "10115",
+                    "country": "DE"
+                  }
+                },
+                "buyer": {
+                  "name": "Globex SAS",
+                  "postalAddress": {
+                    "line1": "15 rue de Rivoli",
+                    "city": "Paris",
+                    "postCode": "75001",
+                    "country": "FR"
+                  }
+                },
+                "paymentDetails": { "paymentAccountIdentifier": "DE89370400440532013000" },
+                "lines": [
+                  {
+                    "quantity": 10,
+                    "priceDetails": { "netPrice": 150.00 },
+                    "vatInformation": { "rate": 19.00 },
+                    "item": { "name": "Senior consulting" }
+                  }
+                ]
+              }
+            }
+            """;
+
+        RequestBody body = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
             .url("https://api.invoicexml.com/v1/create/facturx")
