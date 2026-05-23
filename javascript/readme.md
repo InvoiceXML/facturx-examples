@@ -51,17 +51,27 @@ Each file is a complete, runnable HTML page. Open it in a browser, paste your AP
 ```html
 <button id="run">Generate invoice</button>
 <script>
-const form = new FormData();
-form.append('InvoiceNumber', 'INV-2025-001');
-form.append('IssueDate', '2025-07-01');
-form.append('Currency', 'EUR');
-// ... seller, buyer, line items, payment fields
+const payload = {
+    invoice: {
+        invoiceNumber: 'MIN-001',
+        issueDate:     '2026-05-18',
+        currency:      'EUR',
+        seller: { name: 'Acme', vatIdentifier: 'DE123456789', /* ... */ },
+        buyer:  { name: 'Globex SAS', /* ... */ },
+        paymentDetails: { paymentAccountIdentifier: 'DE89370400440532013000' },
+        lines: [{ quantity: 10, priceDetails: { netPrice: 150.00 },
+                  vatInformation: { rate: 19.00 }, item: { name: 'Senior consulting' } }],
+    },
+};
 
 document.getElementById('run').addEventListener('click', async () => {
     const response = await fetch('https://api.invoicexml.com/v1/create/facturx', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + apiKey },
-        body: form,
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify(payload),
     });
     const blob = await response.blob();
     const a = document.createElement('a');
