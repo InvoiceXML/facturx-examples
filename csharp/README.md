@@ -44,31 +44,41 @@ If you prefer plain `HttpClient` over Flurl, every example translates directly. 
 ```csharp
 using Flurl.Http;
 
+var payload = new
+{
+    invoice = new
+    {
+        invoiceNumber = "MIN-001",
+        issueDate     = "2026-05-18",
+        currency      = "EUR",
+        seller = new
+        {
+            name              = "Acme",
+            vatIdentifier     = "DE123456789",
+            legalRegistration = "HRB 12345",
+            postalAddress     = new { line1 = "Hauptstraße 12", city = "Berlin", postCode = "10115", country = "DE" }
+        },
+        buyer = new
+        {
+            name          = "Globex SAS",
+            postalAddress = new { line1 = "15 rue de Rivoli", city = "Paris", postCode = "75001", country = "FR" }
+        },
+        paymentDetails = new { paymentAccountIdentifier = "DE89370400440532013000" },
+        lines = new[]
+        {
+            new {
+                quantity       = 10,
+                priceDetails   = new { netPrice = 150.00m },
+                vatInformation = new { rate = 19.00m },
+                item           = new { name = "Senior consulting" }
+            }
+        }
+    }
+};
+
 var pdfBytes = await "https://api.invoicexml.com/v1/create/facturx"
     .WithOAuthBearerToken(apiKey)
-    .PostMultipartAsync(mp => mp
-        .AddString("InvoiceNumber", "INV-2025-001")
-        .AddString("IssueDate", "2025-07-01")
-        .AddString("PaymentDueDate", "2025-08-01")
-        .AddString("Currency", "EUR")
-        .AddString("SellerName", "Acme GmbH")
-        .AddString("SellerTaxId", "DE123456789")
-        .AddString("SellerStreet", "Musterstr. 1")
-        .AddString("SellerPostcode", "10115")
-        .AddString("SellerCity", "Berlin")
-        .AddString("SellerCountry", "DE")
-        .AddString("BuyerName", "Example Corp")
-        .AddString("BuyerStreet", "12 Rue de Rivoli")
-        .AddString("BuyerPostcode", "75001")
-        .AddString("BuyerCity", "Paris")
-        .AddString("BuyerCountry", "FR")
-        .AddString("Lines[0].Description", "Consulting Services")
-        .AddString("Lines[0].Quantity", "10")
-        .AddString("Lines[0].UnitPrice", "150.00")
-        .AddString("Lines[0].TaxPercentage", "19")
-        .AddString("PaymentMeansCode", "30")
-        .AddString("IBAN", "DE89370400440532013000")
-    )
+    .PostJsonAsync(payload)
     .ReceiveBytes();
 
 await File.WriteAllBytesAsync("invoice-facturx.pdf", pdfBytes);
